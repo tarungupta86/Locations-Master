@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>POL Locations</title>
+<meta name="description" content="IOCL 124 POL Locations with material-wise tankage">
+<meta name="theme-color" content="#f26522">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="POL Locations">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --orange:#f26522; --blue:#00539f; --bg:#f4f5f7; --card:#ffffff;
+  --text:#1c1c1e; --sub:#6e6e73; --line:#e5e5ea;
+  --sat:env(safe-area-inset-top); --sab:env(safe-area-inset-bottom);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);overscroll-behavior-y:contain}
+header{position:sticky;top:0;z-index:10;background:linear-gradient(135deg,var(--blue),#003a70);color:#fff;padding:calc(var(--sat) + 14px) 16px 12px}
+header h1{font-size:19px;font-weight:700;letter-spacing:.2px}
+header p{font-size:12px;opacity:.85;margin-top:2px}
+.search-wrap{padding:10px 16px 4px}
+.search{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:12px;font-size:16px;background:var(--card);outline:none;color:var(--text)}
+.search:focus{border-color:var(--blue)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:10px 16px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;padding:7px 14px;border-radius:20px;background:var(--card);border:1px solid var(--line);font-size:13px;font-weight:500;color:var(--sub);cursor:pointer;user-select:none;-webkit-user-select:none}
+.chip.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.stats{display:flex;gap:8px;padding:0 16px 10px}
+.stat{flex:1;background:var(--card);border-radius:12px;padding:10px 4px;text-align:center;border:1px solid var(--line)}
+.stat b{display:block;font-size:16px;color:var(--blue)}
+.stat span{font-size:10.5px;color:var(--sub)}
+#list{padding:0 16px calc(var(--sab) + 24px)}
+.count{font-size:12px;color:var(--sub);padding:2px 2px 8px}
+.card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:10px;border:1px solid var(--line);cursor:pointer;transition:transform .06s}
+.card:active{transform:scale(.98)}
+.card .top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.card h3{font-size:15.5px;font-weight:600;line-height:1.3}
+.card .code{font-size:11px;color:var(--sub);background:var(--bg);border-radius:6px;padding:2px 7px;white-space:nowrap}
+.card .meta{font-size:12.5px;color:var(--sub);margin-top:4px}
+.badges{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+.badge{font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:6px;color:#fff}
+.b-tot{background:#444}
+.b-none{background:#c7c7cc}
+.b-more{background:var(--bg);color:var(--sub)}
+.b-type{font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:6px;background:#fff3ec;color:var(--orange);border:1px solid #ffd9c2}
+/* detail sheet */
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .25s;z-index:20}
+#overlay.show{opacity:1;pointer-events:auto}
+#sheet{position:fixed;left:0;right:0;bottom:0;max-height:92%;background:var(--bg);border-radius:18px 18px 0 0;transform:translateY(105%);transition:transform .3s cubic-bezier(.2,.8,.25,1);z-index:21;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--sab) + 20px)}
+#sheet.show{transform:translateY(0)}
+.sheet-head{position:sticky;top:0;background:linear-gradient(135deg,var(--blue),#003a70);color:#fff;padding:18px 16px 14px;border-radius:18px 18px 0 0;z-index:2}
+.grab{width:38px;height:4px;border-radius:2px;background:rgba(255,255,255,.5);margin:0 auto 12px}
+.sheet-head h2{font-size:19px;font-weight:700;line-height:1.25;padding-right:40px}
+.sheet-head p{font-size:12.5px;opacity:.85;margin-top:3px}
+.close{position:absolute;top:16px;right:14px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.22);color:#fff;border:none;font-size:16px;cursor:pointer;line-height:30px}
+.sec{margin:12px 16px 0;background:var(--card);border-radius:14px;border:1px solid var(--line);overflow:hidden}
+.sec h4{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--sub);padding:12px 14px 4px}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:9px 14px;border-top:1px solid var(--bg);font-size:14px}
+.kv .k{color:var(--sub);flex-shrink:0}
+.kv .v{text-align:right;font-weight:500;overflow-wrap:anywhere}
+.map-link{display:block;text-align:center;padding:12px;font-size:14px;font-weight:600;color:var(--blue);text-decoration:none;border-top:1px solid var(--bg)}
+.tk-total{display:flex;justify-content:space-between;align-items:center;padding:13px 14px;background:#fff8f3}
+.tk-total .lbl{font-size:13.5px;font-weight:600;color:var(--orange)}
+.tk-total .val{font-size:17px;font-weight:800;color:var(--orange)}
+.tk-row{padding:10px 14px;border-top:1px solid var(--bg);cursor:pointer}
+.tk-row .r1{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;font-weight:600}
+.tk-row .chev{display:inline-block;font-size:10px;color:var(--sub);margin-right:5px;transition:transform .2s}
+.tk-row.open .chev{transform:rotate(90deg)}
+.tanks{display:none;margin-top:8px;border-radius:10px;background:var(--bg);overflow:hidden}
+.tk-row.open .tanks{display:block}
+.tank-line{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 10px;border-top:1px solid var(--card);font-size:12.5px}
+.tank-line:first-child{border-top:none}
+.tank-line .tid{font-weight:600}
+.tank-line .tst{font-size:10px;color:var(--sub);background:var(--card);border-radius:5px;padding:2px 6px;white-space:nowrap}
+.tank-line .tkl{font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tt-head,.tt-line{display:grid;grid-template-columns:1fr 74px 64px 58px;gap:6px;padding:8px 14px;border-top:1px solid var(--bg);font-size:12.5px;align-items:center}
+.tt-head{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--sub);border-top:none;padding-bottom:2px}
+.tt-line b{font-weight:600}
+.tt-line .num{text-align:right;font-variant-numeric:tabular-nums}
+.tt-head .num{text-align:right}
+.tk-row .r1 .nm{line-height:1.3}
+.tk-row .r1 .amt{white-space:nowrap;font-variant-numeric:tabular-nums}
+.tk-row .r2{font-size:11px;color:var(--sub);margin-top:2px}
+.bar{height:6px;border-radius:3px;background:var(--bg);margin-top:7px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:3px;background:var(--blue)}
+.nodata{padding:16px 14px;font-size:13.5px;color:var(--sub)}
+.empty{text-align:center;color:var(--sub);padding:40px 20px;font-size:14px}
+.foot-note{margin:14px 16px 0;font-size:11px;color:var(--sub);text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <h1>POL Locations</h1>
+  <p>124 Terminals &amp; Depots · Tankage as on __ASOF__</p>
+</header>
+
+<div class="search-wrap"><input class="search" id="q" type="search" placeholder="Search location, district, state, plant code…"></div>
+
+<div class="chips" id="regionChips"></div>
+<div class="chips" id="typeChips" style="padding-top:0"></div>
+
+<div class="stats" id="stats"></div>
+
+<div id="list"></div>
+
+<div id="overlay"></div>
+<div id="sheet"></div>
+
+<script>
+const DATA = __DATA__;
+const fmt = n => (n==null||n==="") ? "–" : (typeof n==="number" ? n.toLocaleString("en-IN") : n);
+const COLORS = [
+  [/ETHANOL|BUTANOL|SOLV/i,"#00897b"],
+  [/^MS|^MG|XP100|EBMS|-MS$/i,"#2e7d32"],
+  [/HSD|DIESEL/i,"#00539f"],
+  [/SKO|KEROSENE/i,"#8e24aa"],
+  [/ATF|JET|J P|-AF$/i,"#e65100"],
+  [/BITUMEN|DURAPAVE|CRMB|BITU/i,"#37474f"],
+  [/FURNACE|FO\)|LSHS|LDO|LVFO|MARINE/i,"#6d4c41"],
+  [/NAPHTHA|NMA/i,"#c2185b"]
+];
+const mcolor = m => { for(const [re,c] of COLORS) if(re.test(m)) return c; return "#607d8b"; };
+
+let region = "All", type = "All", q = "";
+const regions = ["All", ...new Set(DATA.map(d=>d.region))];
+const types = ["All", ...new Set(DATA.map(d=>d.type))];
+
+function chips(el, items, cur, cb){
+  el.innerHTML = items.map(r=>`<div class="chip ${r===cur?'on':''}" data-v="${r}">${r==="All"?(el.id==="regionChips"?"All Regions":"All Types"):r}</div>`).join("");
+  el.querySelectorAll(".chip").forEach(c=>c.onclick=()=>cb(c.dataset.v));
+}
+
+function render(){
+  chips(document.getElementById("regionChips"), regions, region, v=>{region=v;render();});
+  chips(document.getElementById("typeChips"), types, type, v=>{type=v;render();});
+  const qq = q.trim().toLowerCase();
+  const rows = DATA.filter(d =>
+    (region==="All"||d.region===region) &&
+    (type==="All"||d.type===type) &&
+    (!qq || [d.name,d.district,d.state,d.so,String(d.plant)].join(" ").toLowerCase().includes(qq))
+  );
+  const tot = rows.reduce((s,d)=>s+d.tankageTotal,0);
+  document.getElementById("stats").innerHTML = `
+    <div class="stat"><b>${rows.length}</b><span>Locations</span></div>
+    <div class="stat"><b>${fmt(Math.round(tot/1000))}</b><span>Tankage ('000 KL)</span></div>
+    <div class="stat"><b>${rows.filter(d=>d.type==="Terminals").length}</b><span>Terminals</span></div>
+    <div class="stat"><b>${rows.filter(d=>d.type!=="Terminals").length}</b><span>Depots</span></div>`;
+  document.getElementById("list").innerHTML =
+    `<div class="count">${rows.length} location${rows.length!==1?"s":""}</div>` +
+    (rows.length ? rows.map(cardHTML).join("") : `<div class="empty">No locations match your search.</div>`) +
+    `<div class="foot-note">Source: POL LOCS master &amp; tank stock dated __ASOF__. Tankage in KL (gross).</div>`;
+  document.querySelectorAll(".card").forEach(c=>c.onclick=()=>openSheet(c.dataset.p));
+}
+
+function shortMat(m){
+  return m.length>18 ? m.slice(0,16)+"…" : m;
+}
+function cardHTML(d){
+  const top = d.products.slice(0,3).map(p=>`<span class="badge" style="background:${mcolor(p.m)}">${shortMat(p.m)} ${fmt(p.t)}</span>`).join("");
+  const more = d.products.length>3 ? `<span class="badge b-more">+${d.products.length-3} more</span>` : "";
+  return `<div class="card" data-p="${d.plant}">
+    <div class="top"><h3>${d.name}</h3><span class="code">${d.plant}</span></div>
+    <div class="meta">${d.district}, ${d.state} · ${d.so}</div>
+    <div class="badges"><span class="b-type">${d.type}</span>${
+      d.tankageTotal ? `<span class="badge b-tot">Total ${fmt(d.tankageTotal)} KL</span>` : `<span class="badge b-none">No tankage data</span>`
+    }</div>
+    ${top?`<div class="badges">${top}${more}</div>`:""}
+  </div>`;
+}
+
+function autoLabel(d){
+  const parts=[];
+  if(d.autoTT==="Y") parts.push("TT Loading");
+  if(d.autoTFMS==="Y") parts.push("TFMS");
+  if(d.autoManual==="Y") return "Fully Manual";
+  return parts.length ? "Automated: "+parts.join(" + ") : null;
+}
+
+function openSheet(p){
+  const d = DATA.find(x=>String(x.plant)===String(p));
+  if(!d) return;
+  const s = document.getElementById("sheet");
+  const max = Math.max(...d.products.map(x=>x.t), 1);
+  const tkRows = d.products.map((x,i)=>`
+    <div class="tk-row" id="tkr${i}" onclick="toggleTanks(event,${i})">
+      <div class="r1"><span class="nm" style="color:${mcolor(x.m)}"><span class="chev">▶</span>${x.m}</span><span class="amt">${fmt(x.t)} KL</span></div>
+      <div class="r2">${x.n} tank${x.n!==1?"s":""} · ${(x.t/d.tankageTotal*100).toFixed(1)}% of location tankage · tap for tank-wise details</div>
+      <div class="bar"><i style="width:${(x.t/max*100).toFixed(1)}%;background:${mcolor(x.m)}"></i></div>
+      <div class="tanks">${(x.tanks||[]).map(t=>`
+        <div class="tank-line"><span class="tid">${t.k}</span><span class="tkl">${fmt(t.t)} KL</span></div>`).join("")}
+      </div>
+    </div>`).join("");
+  const sm = v => v>0&&v<1 ? "<1" : fmt(Math.round(v));
+  let ttRows = "";
+  if(d.ttLoading&&d.ttLoading.length){
+    const tvm = d.ttLoading.reduce((s,x)=>s+x.vm,0);
+    const tvd = d.ttLoading.reduce((s,x)=>s+x.vd,0);
+    const ttd = d.ttLoading.reduce((s,x)=>s+x.td,0);
+    ttRows = `
+    <div class="tt-head"><span>Material Group</span><span class="num">Vol/Month KL</span><span class="num">Vol/Day KL</span><span class="num">TTs/Day</span></div>` +
+    d.ttLoading.map(x=>`
+    <div class="tt-line"><b style="color:${mcolor(x.g)}">${x.g}</b><span class="num">${sm(x.vm)}</span><span class="num">${sm(x.vd)}</span><span class="num">${sm(x.td)}</span></div>`).join("") +
+    `<div class="tt-line" style="background:#fff8f3"><b style="color:var(--orange)">Total</b><span class="num" style="font-weight:700;color:var(--orange)">${sm(tvm)}</span><span class="num" style="font-weight:700;color:var(--orange)">${sm(tvd)}</span><span class="num" style="font-weight:700;color:var(--orange)">${sm(ttd)}</span></div>`;
+  }
+  const maps = (d.lat && d.lon) ? `<a class="map-link" href="https://maps.apple.com/?ll=${d.lat},${d.lon}&q=${encodeURIComponent(d.name)}" target="_blank" rel="noopener">Open in Maps ↗</a>` : "";
+  s.innerHTML = `
+    <div class="sheet-head"><div class="grab"></div>
+      <h2>${d.name}</h2><p>Plant ${d.plant} · ${d.type} · ${d.region}</p>
+      <button class="close" onclick="closeSheet()">✕</button>
+    </div>
+    <div class="sec">
+      <div class="tk-total"><span class="lbl">Total Tankage${d.tankCount?` · ${d.tankCount} tanks`:""}</span><span class="val">${d.tankageTotal?fmt(d.tankageTotal)+" KL":"No data"}</span></div>
+      ${tkRows || (d.tankageTotal ? `<div class="nodata">Material-wise break-up not available for this location.</div>` : `<div class="nodata">No tankage found for this location in the tank stock file dated __ASOF__.</div>`)}
+    </div>
+    ${ttRows?`<div class="sec"><h4>TT Loading · Apr–Jun 2026</h4>${ttRows}</div>`:""}
+    <div class="sec"><h4>Location Details</h4>
+      ${kv("State Office", d.so + " ("+d.soCode+")")}
+      ${kv("District", d.district)}
+      ${kv("State", d.state + " ("+d.stateCode+")")}
+      ${kv("Region", d.region)}
+      ${kv("Type", d.type)}
+      ${kv("Area", d.area!=null ? fmt(d.area)+" acres" : null)}
+      ${kv("Commissioned", d.commissioned)}
+      ${kv("Age", d.age!=null ? d.age+" years" : null)}
+      ${kv("Shift Operation", d.shift)}
+      ${kv("Coordinates", (d.lat&&d.lon)? d.lat+", "+d.lon : null)}
+      ${maps}
+    </div>
+    <div class="sec"><h4>Automation</h4>
+      ${kv("Status", autoLabel(d))}
+      ${kv("TT Loading Automation", d.autoTT)}
+      ${kv("TFMS", d.autoTFMS)}
+      ${kv("Fully Manual", d.autoManual)}
+      ${kv("Automated", d.automated)}
+      ${kv("SMART Status", d.smart)}
+      ${kv("Vendor (TTES)", d.vendorTTES)}
+      ${kv("Vendor (TFMS)", d.vendorTFMS)}
+    </div>
+    <div class="sec"><h4>Operations</h4>
+      ${kv("Mode of Receipt", d.receipt)}
+      ${kv("Mode of Delivery", d.delivery)}
+      ${kv("Product Type", d.prodType)}
+      ${kv("Products Handled", d.prodHandled)}
+      ${kv("TLF Facility", d.tlf)}
+      ${kv("Annual Throughput 2025-26", d.throughput!=null ? fmt(d.throughput)+" KL" : null)}
+      ${kv("EBMS Receipt", d.ebms)}
+      ${kv("Avg TT Loading / Day", d.avgTT!=null ? fmt(d.avgTT) : null)}
+      ${kv("Monthly Rake Unloading", d.rake)}
+      ${kv("ATF TTs Handling / Day", d.atfDay)}
+    </div>`;
+  document.getElementById("overlay").classList.add("show");
+  s.classList.add("show");
+  s.scrollTop = 0;
+  history.pushState({sheet:1},"");
+}
+function kv(k,v){ return (v==null||v==="")?"":`<div class="kv"><span class="k">${k}</span><span class="v">${v}</span></div>`; }
+function toggleTanks(ev,i){
+  const row = document.getElementById("tkr"+i);
+  if(row) row.classList.toggle("open");
+}
+function closeSheet(){
+  document.getElementById("overlay").classList.remove("show");
+  document.getElementById("sheet").classList.remove("show");
+  if(history.state && history.state.sheet) history.back();
+}
+document.getElementById("overlay").onclick = closeSheet;
+window.addEventListener("popstate", ()=>{
+  document.getElementById("overlay").classList.remove("show");
+  document.getElementById("sheet").classList.remove("show");
+});
+document.getElementById("q").addEventListener("input", e=>{q=e.target.value;render();});
+
+render();
+
+if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+</script>
+</body>
+</html>
