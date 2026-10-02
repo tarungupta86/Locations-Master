@@ -1,17 +1,21 @@
 """Rebuild the POL Locations PWA from source Excel files.
 
 Run from the pol-locations-pwa folder:  python3 build_app.py
-Sources (in parent folder): POL LOCS.xlsx (sheet 124 LOCS), tankstk 01.10.2026.xlsx (sheet tankstk)
-Manual corrections applied (per user instructions):
-  1. Androth Terminal (4253): total tankage 310 KL (not present in tankstk)
-  2. Ambala Terminal (1122): MS tankage removed
-  3. Monthly Rake Unloading and ATF TTs Handling/Day rounded to whole numbers
+Sources (in parent folder): POL LOCS.xlsx (sheet 124 LOCS), tankstk DD.MM.YYYY.xlsx (sheet tankstk),
+TT_Loading_Summary_*.xlsx (sheet Summary)
+Standing corrections (per Tarun):
+  1. Androth Terminal (4253): use file figure; fall back to 310 KL only if absent from tankstk
+  2. Ambala Terminal (1122): no MS tankage (removed from products, totals and maintenance list)
+  3. Avg TT loading/day, Monthly Rake Unloading and ATF TTs Handling/Day rounded to whole numbers
+  4. Tank-wise details show no status remarks (Operative / Under Receipt) -- handled in template
 """
 import openpyxl, json, datetime, collections, os, re
 
 SRC_LOCS = "../POL LOCS.xlsx"
 SRC_TANK = "../tankstk 01.10.2026.xlsx"
-SRC_TT = "../TT_Loading_Summary_Apr-Jun_2026.xlsx"
+SRC_TT = "../TT LOADING APR SEP 2026.XLSX"   # raw month-wise TT loading report
+TT_MONTHS = {"202604", "202605", "202606", "202607", "202608", "202609"}
+TT_PERIOD = "Apr–Sep 2026"
 ASOF = "01.10.2026"
 REGION = {"NR": "Northern Region", "ER": "Eastern Region", "WR": "Western Region", "SR": "Southern Region"}
 
@@ -50,9 +54,16 @@ assert len(locs) == 124, f"expected 124 locations, got {len(locs)}"
 wb = openpyxl.load_workbook(SRC_TANK, read_only=True, data_only=True)
 ws = wb["tankstk"]
 tk = collections.defaultdict(lambda: collections.defaultdict(lambda: [0.0, 0, []]))
+maint = collections.defaultdict(list)   # plant -> tanks under maintenance (col M > 0)
 for r in ws.iter_rows(min_row=2, values_only=True):
     if r[1] is None or r[9] is None:
         continue
+    m = r[12]
+    if isinstance(m, (int, float)) and m > 0:
+        maint[r[1]].append({"k": str(r[10]).strip() if r[10] is not None else "–",
+                            "m": str(r[9]).strip(),
+                            "c": round(r[11] or 0),
+                            "u": round(m)})
     e = tk[r[1]][str(r[9]).strip()]
     e[0] += r[11] or 0
     e[1] += 1
@@ -68,17 +79,29 @@ for l in locs:
                       "tanks": sorted(tanks, key=lambda x: -x["t"])} for m, t, n, tanks in prods]
     l["tankageTotal"] = round(sum(v[0] for v in mats.values()))
     l["tankCount"] = sum(v[1] for v in mats.values())
+    l["maint"] = sorted(maint.get(l["plant"], []), key=lambda x: -x["c"])
 
-# ---- TT loading summary Apr-Jun 2026 (material group wise) ----
+# ---- TT loading (material group wise) from raw month-wise report ----
+# Columns: A State Office, B Plant, C Month (YYYYMM), D Material Group, E Total Volume KL,
+#          G Total No. of TTs, K No. of working days. Total rows (Month/Plant/State Office) excluded.
+# Avg vol/month = total volume / months with loading; avg vol/day and TTs/day = totals / working days.
 wb = openpyxl.load_workbook(SRC_TT, read_only=True, data_only=True)
-ws = wb["Summary"]
-ttl = collections.defaultdict(list)
-for r in ws.iter_rows(min_row=5, values_only=True):
-    if r[1] is None or r[2] is None:
+ws = wb[wb.sheetnames[0]]
+agg = collections.defaultdict(lambda: [0.0, 0.0, 0.0, 0])   # (plant, group) -> vol, tts, days, months
+for r in ws.iter_rows(min_row=2, values_only=True):
+    plant, month, grp = (str(r[1]).strip() if r[1] is not None else ""), str(r[2]).strip(), (r[3] or "")
+    if not plant or month not in TT_MONTHS or "Total" in str(grp):
         continue
-    ttl[str(r[1]).strip()].append({"g": str(r[2]).strip(),
-                                   "vm": r[3] or 0, "vd": r[4] or 0, "td": r[5] or 0})
+    vol = float(r[4] or 0); tts = float(r[6] or 0); days = float(r[10] or 0)
+    if vol <= 0 and tts <= 0:
+        continue
+    e = agg[(plant, str(grp).strip())]
+    e[0] += vol; e[1] += tts; e[2] += days; e[3] += 1
 wb.close()
+ttl = collections.defaultdict(list)
+for (plant, grp), (vol, tts, days, n) in agg.items():
+    ttl[plant].append({"g": grp, "vm": vol / n, "vd": vol / days if days else 0,
+                       "td": tts / days if days else 0})
 
 for l in locs:
     rows = ttl.get(str(l["plant"]), [])
@@ -96,13 +119,14 @@ removed = [p for p in amb["products"] if p["m"].startswith("MS")]
 amb["products"] = [p for p in amb["products"] if not p["m"].startswith("MS")]
 amb["tankageTotal"] -= sum(p["t"] for p in removed)
 amb["tankCount"] -= sum(p["n"] for p in removed)
+amb["maint"] = [t for t in amb["maint"] if not t["m"].startswith("MS")]
 
 # ---- write ----
 json.dump(locs, open("data.json", "w"), ensure_ascii=False)
 tpl = open("app_template.html", encoding="utf-8").read()
 open("index.html", "w", encoding="utf-8").write(
     tpl.replace("__DATA__", json.dumps(locs, ensure_ascii=False, separators=(",", ":")))
-       .replace("__ASOF__", ASOF))
+       .replace("__ASOF__", ASOF).replace("__TTPERIOD__", TT_PERIOD))
 
 # bump service worker cache version
 sw = open("sw.js", encoding="utf-8").read()
@@ -113,5 +137,7 @@ open("sw.js", "w", encoding="utf-8").write(sw.replace(m.group(0), new))
 print("locations:", len(locs))
 print("grand total tankage:", sum(l["tankageTotal"] for l in locs), "KL")
 print("no tankage:", [(l["plant"], l["name"]) for l in locs if l["tankageTotal"] == 0])
-print("Ambala:", amb["tankageTotal"], "KL", amb["products"])
+print("Ambala:", amb["tankageTotal"], "KL", [(p["m"], p["t"]) for p in amb["products"]])
+print("tanks under maintenance:", sum(len(l["maint"]) for l in locs),
+      "at", sum(1 for l in locs if l["maint"]), "locations")
 print("sw cache:", new)

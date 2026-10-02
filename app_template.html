@@ -84,6 +84,11 @@ header p{font-size:12px;opacity:.85;margin-top:2px}
 .tt-line b{font-weight:600}
 .tt-line .num{text-align:right;font-variant-numeric:tabular-nums}
 .tt-head .num{text-align:right}
+.mt-head,.mt-line{display:grid;grid-template-columns:58px 1fr 92px;gap:8px;padding:8px 14px;border-top:1px solid var(--bg);font-size:12.5px;align-items:center}
+.mt-head{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--sub);border-top:none;padding-bottom:2px}
+.mt-line b{font-weight:600}
+.mt-line .num,.mt-head .num{text-align:right;font-variant-numeric:tabular-nums}
+.mt-line small{display:block;font-size:10px;color:var(--sub);font-weight:400}
 .tk-row .r1 .nm{line-height:1.3}
 .tk-row .r1 .amt{white-space:nowrap;font-variant-numeric:tabular-nums}
 .tk-row .r2{font-size:11px;color:var(--sub);margin-top:2px}
@@ -218,7 +223,12 @@ function openSheet(p){
       <div class="tk-total"><span class="lbl">Total Tankage${d.tankCount?` · ${d.tankCount} tanks`:""}</span><span class="val">${d.tankageTotal?fmt(d.tankageTotal)+" KL":"No data"}</span></div>
       ${tkRows || (d.tankageTotal ? `<div class="nodata">Material-wise break-up not available for this location.</div>` : `<div class="nodata">No tankage found for this location in the tank stock file dated __ASOF__.</div>`)}
     </div>
-    ${ttRows?`<div class="sec"><h4>TT Loading · Apr–Jun 2026</h4>${ttRows}</div>`:""}
+    ${(d.maint&&d.maint.length)?`<div class="sec"><h4>Tanks Under Maintenance · ${d.maint.length}</h4>
+      <div class="mt-head"><span>Tank</span><span>Material</span><span class="num">Capacity KL</span></div>
+      ${d.maint.map(t=>`<div class="mt-line"><b>${t.k}</b><span style="color:${mcolor(t.m)}">${t.m}</span><span class="num">${fmt(t.c)}${t.u!==t.c?`<small>${fmt(t.u)} under maint.</small>`:""}</span></div>`).join("")}
+      <div class="mt-line" style="background:#fff8f3"><b style="color:var(--orange)">Total</b><span></span><span class="num" style="font-weight:700;color:var(--orange)">${fmt(d.maint.reduce((s,t)=>s+t.c,0))}</span></div>
+    </div>`:""}
+    ${ttRows?`<div class="sec"><h4>TT Loading · __TTPERIOD__</h4>${ttRows}</div>`:""}
     <div class="sec"><h4>Location Details</h4>
       ${kv("State Office", d.so + " ("+d.soCode+")")}
       ${kv("District", d.district)}
