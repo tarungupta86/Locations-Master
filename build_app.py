@@ -1,7 +1,7 @@
 """Rebuild the POL Locations PWA from source Excel files.
 
 Run from the pol-locations-pwa folder:  python3 build_app.py
-Sources (in parent folder): POL LOCS.xlsx (sheet 124 LOCS), tankstk 01.06.2026.xlsx (sheet tankstk)
+Sources (in parent folder): POL LOCS.xlsx (sheet 124 LOCS), tankstk 01.10.2026.xlsx (sheet tankstk)
 Manual corrections applied (per user instructions):
   1. Androth Terminal (4253): total tankage 310 KL (not present in tankstk)
   2. Ambala Terminal (1122): MS tankage removed
@@ -10,9 +10,9 @@ Manual corrections applied (per user instructions):
 import openpyxl, json, datetime, collections, os, re
 
 SRC_LOCS = "../POL LOCS.xlsx"
-SRC_TANK = "../tankstk 01.09.2026.xlsx"
+SRC_TANK = "../tankstk 01.10.2026.xlsx"
 SRC_TT = "../TT_Loading_Summary_Apr-Jun_2026.xlsx"
-ASOF = "01.09.2026"
+ASOF = "01.10.2026"
 REGION = {"NR": "Northern Region", "ER": "Eastern Region", "WR": "Western Region", "SR": "Southern Region"}
 
 def clean(v):
