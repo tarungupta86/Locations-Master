@@ -13,7 +13,7 @@ import openpyxl, json, datetime, collections, os, re
 
 SRC_LOCS = "../POL LOCS.xlsx"
 SRC_TANK = "../tankstk 01.10.2026.xlsx"
-SRC_TT = "../TT LOADING APR SEP 2026.XLSX"   # raw month-wise TT loading report
+SRC_TT = "../TT LOADING APR SEP 2026 rev.XLSX"   # raw month-wise TT loading report
 TT_MONTHS = {"202604", "202605", "202606", "202607", "202608", "202609"}
 TT_PERIOD = "Apr–Sep 2026"
 ASOF = "01.10.2026"
