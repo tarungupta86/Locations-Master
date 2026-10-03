@@ -1,4 +1,4 @@
-const CACHE = "pol-locations-v14";
+const CACHE = "pol-locations-v23";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {
